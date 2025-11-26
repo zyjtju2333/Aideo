@@ -1,0 +1,49 @@
+[package]
+name = "aideo"
+version = "0.1.0"
+description = "AI-powered Todo Application"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "aideo_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri 核心
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+
+# 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 数据库
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+
+# HTTP 客户端
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID 生成
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# 异步流处理
+futures = "0.3"
+
+# 错误处理
+thiserror = "1"
+anyhow = "1"
+
+# 日志
+log = "0.4"
+env_logger = "0.11"
+
