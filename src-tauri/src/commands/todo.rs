@@ -3,74 +3,96 @@ use crate::state::AppState;
 use crate::models::todo::*;
 use crate::error::AppError;
 
+// 在专用的阻塞线程池中执行数据库操作，避免阻塞主异步运行时线程
+async fn run_db<F, T>(f: F) -> Result<T, AppError>
+where
+    F: FnOnce() -> Result<T, AppError> + Send + 'static,
+    T: Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(f)
+        .await
+        .map_err(|e| AppError::ApiError(format!("DB task join error: {}", e)))?
+}
+
 #[tauri::command]
-pub fn create_todo(
+pub async fn create_todo(
     state: State<'_, AppState>,
     text: String,
     priority: Option<Priority>,
     due_date: Option<String>,
     tags: Option<Vec<String>>,
 ) -> Result<Todo, AppError> {
-    let request = CreateTodoRequest {
-        text,
-        priority,
-        due_date,
-        tags,
-    };
-    state.todo_repo.create(request)
+    let repo = state.todo_repo.clone();
+    let request = CreateTodoRequest { text, priority, due_date, tags };
+
+    run_db(move || repo.create(request)).await
 }
 
 #[tauri::command]
-pub fn get_todos(
+pub async fn get_todos(
     state: State<'_, AppState>,
     filter: Option<TodoFilter>,
 ) -> Result<Vec<Todo>, AppError> {
-    state.todo_repo.get_all(filter)
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.get_all(filter)).await
 }
 
 #[tauri::command]
-pub fn get_todo(
+pub async fn get_todo(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<Todo, AppError> {
-    state.todo_repo.get_by_id(&id)
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.get_by_id(&id)).await
 }
 
 #[tauri::command]
-pub fn update_todo(
+pub async fn update_todo(
     state: State<'_, AppState>,
     id: String,
     updates: UpdateTodoRequest,
 ) -> Result<Todo, AppError> {
-    state.todo_repo.update(&id, updates)
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.update(&id, updates)).await
 }
 
 #[tauri::command]
-pub fn delete_todo(
+pub async fn delete_todo(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), AppError> {
-    state.todo_repo.delete(&id)
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.delete(&id)).await
 }
 
 #[tauri::command]
-pub fn batch_create_todos(
+pub async fn batch_create_todos(
     state: State<'_, AppState>,
     todos: Vec<CreateTodoRequest>,
 ) -> Result<Vec<Todo>, AppError> {
-    state.todo_repo.batch_create(todos)
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.batch_create(todos)).await
 }
 
 #[tauri::command]
-pub fn delete_completed_todos(
+pub async fn delete_completed_todos(
     state: State<'_, AppState>,
 ) -> Result<u32, AppError> {
-    state.todo_repo.delete_completed()
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.delete_completed()).await
 }
 
 #[tauri::command]
-pub fn get_todo_statistics(
+pub async fn get_todo_statistics(
     state: State<'_, AppState>,
 ) -> Result<TodoStatistics, AppError> {
-    state.todo_repo.get_statistics()
+    let repo = state.todo_repo.clone();
+
+    run_db(move || repo.get_statistics()).await
 }

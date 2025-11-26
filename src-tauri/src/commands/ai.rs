@@ -1,4 +1,4 @@
-use tauri::{AppHandle, State, Emitter};
+use tauri::{AppHandle, State};
 use crate::state::AppState;
 use crate::models::ai::*;
 use crate::error::AppError;

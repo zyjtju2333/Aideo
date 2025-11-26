@@ -81,6 +81,8 @@ impl AiService {
 
     /// 非流式聊天（支持 Function Call 循环）
     pub async fn chat(&self, request: AiChatRequest) -> Result<AiChatResponse, AppError> {
+        log::info!("AI chat request received");
+
         let settings = self.settings_repo.get()?;
         let todos = self.todo_repo.get_all(None)?;
         let mut messages = self.build_messages(&settings, &request, &todos);
@@ -138,6 +140,8 @@ impl AiService {
 
     /// 流式聊天
     pub async fn chat_stream(&self, app: &AppHandle, request: AiChatRequest) -> Result<(), AppError> {
+        log::info!("AI streaming chat request received");
+
         let settings = self.settings_repo.get()?;
         let todos = self.todo_repo.get_all(None)?;
         let messages = self.build_messages(&settings, &request, &todos);
@@ -164,7 +168,9 @@ impl AiService {
             .await?;
 
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await?;
+            log::error!("AI stream API error (status {}): {}", status, error_text);
             return Err(AppError::ApiError(error_text));
         }
 
@@ -258,7 +264,9 @@ impl AiService {
             .await?;
 
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await?;
+            log::error!("AI API error (status {}): {}", status, error_text);
             return Err(AppError::ApiError(error_text));
         }
 

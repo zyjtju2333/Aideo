@@ -128,8 +128,7 @@ impl FunctionExecutor {
     }
 
     pub fn execute(&self, name: &str, arguments: &str) -> Result<Value, AppError> {
-        let args: Value = serde_json::from_str(arguments)
-            .unwrap_or_else(|_| json!({}));
+        let args: Value = serde_json::from_str(arguments)?;
 
         match name {
             "add_todos" => self.add_todos(&args),
