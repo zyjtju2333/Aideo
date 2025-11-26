@@ -22,7 +22,7 @@ impl TodoRepository {
         let tags_json = serde_json::to_string(&tags)?;
 
         self.db.with_conn(|conn| {
-            conn.execute(
+            let affected_rows = conn.execute(
                 "INSERT INTO todos (id, text, completed, status, priority, due_date, tags, created_at, updated_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 (
@@ -37,19 +37,16 @@ impl TodoRepository {
                     &now,
                 ),
             )?;
-            Ok(())
-        })?;
 
-        Ok(Todo {
-            id,
-            text: request.text,
-            completed: false,
-            status: TodoStatus::Pending,
-            priority,
-            due_date: request.due_date,
-            tags,
-            created_at: now.clone(),
-            updated_at: now,
+            if affected_rows != 1 {
+                return Err(AppError::InvalidArgument(format!(
+                    "Expected 1 row to be inserted, but {} were affected",
+                    affected_rows
+                )));
+            }
+
+            // 从数据库读取刚插入的记录以确保数据一致性
+            self.get_by_id_internal(conn, &id)
         })
     }
 
