@@ -22,6 +22,20 @@ pub struct Settings {
     pub temperature: f32,
     pub max_tokens: u32,
     pub system_prompt: String,
+
+    #[serde(default = "default_function_calling_mode")]
+    pub function_calling_mode: String,  // "auto" | "tools" | "functions" | "disabled"
+
+    #[serde(default = "default_true")]
+    pub enable_text_fallback: bool,  // Parse function calls from text if structured fails
+}
+
+fn default_function_calling_mode() -> String {
+    "auto".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -33,6 +47,8 @@ impl Default for Settings {
             temperature: 0.7,
             max_tokens: 2048,
             system_prompt: DEFAULT_SYSTEM_PROMPT.to_string(),
+            function_calling_mode: default_function_calling_mode(),
+            enable_text_fallback: default_true(),
         }
     }
 }

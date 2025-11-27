@@ -51,6 +51,7 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::test_api_connection,
+            commands::settings::test_function_calling,
             // AI commands
             commands::ai::ai_chat,
             commands::ai::ai_chat_stream,

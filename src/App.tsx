@@ -44,6 +44,8 @@ const App: React.FC = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [testingApi, setTestingApi] = useState(false);
   const [apiTestResult, setApiTestResult] = useState<boolean | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [fcTestResult, setFcTestResult] = useState<any>(null);
 
   // AI Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -186,6 +188,28 @@ const App: React.FC = () => {
     }
   };
 
+  const handleTestFunctionCalling = async () => {
+    setIsTesting(true);
+    try {
+      const result = await settingsService.testFunctionCalling();
+      setFcTestResult(result);
+
+      // 如果测试成功，刷新任务列表
+      if (result.success && result.todosCreated > 0) {
+        await loadTodos();
+      }
+    } catch (error) {
+      console.error("Function calling test failed:", error);
+      setFcTestResult({
+        success: false,
+        message: "测试失败",
+        recommendations: ["发生错误，请查看控制台"],
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   // --- AI Chat ---
   const handleSendChat = async () => {
     const text = chatInput.trim();
@@ -221,6 +245,18 @@ const App: React.FC = () => {
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+
+      // Display warnings if any
+      if (response.warnings && response.warnings.length > 0) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `warning-${Date.now()}`,
+            role: "system",
+            content: "⚠️ " + response.warnings.join("\n"),
+          },
+        ]);
+      }
 
       if (response.updatedTodos && Array.isArray(response.updatedTodos)) {
         setTodos(response.updatedTodos);
@@ -632,6 +668,84 @@ const App: React.FC = () => {
                         <span className="text-xs text-red-500">
                           连接失败，请检查 Key 与 Base URL。
                         </span>
+                      )}
+                    </div>
+
+                    {/* Advanced Settings */}
+                    <div className="space-y-3 pt-3 border-t border-gray-200">
+                      <h4 className="text-xs font-semibold text-gray-700 uppercase">高级设置</h4>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          函数调用模式
+                        </label>
+                        <select
+                          value={settings.functionCallingMode || 'auto'}
+                          onChange={(e) => setSettings({ ...settings, functionCallingMode: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="auto">自动（推荐）</option>
+                          <option value="tools">仅现代格式（Tools）</option>
+                          <option value="functions">仅旧版格式（Functions）</option>
+                          <option value="disabled">禁用函数调用</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          自动模式会尝试两种格式以获得最佳兼容性
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="enableTextFallback"
+                          checked={settings.enableTextFallback !== false}
+                          onChange={(e) => setSettings({ ...settings, enableTextFallback: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label htmlFor="enableTextFallback" className="text-sm text-gray-700">
+                          启用文本解析降级（推荐）
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 ml-6">
+                        当 API 不支持结构化函数调用时，尝试从文本中解析函数调用
+                      </p>
+                    </div>
+
+                    {/* Function Calling Test */}
+                    <div className="space-y-2 pt-3 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={handleTestFunctionCalling}
+                        disabled={isTesting}
+                        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm"
+                      >
+                        {isTesting ? "测试中..." : "测试函数调用"}
+                      </button>
+
+                      {fcTestResult && (
+                        <div className={`p-3 rounded text-sm ${fcTestResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                          <p className={`font-semibold ${fcTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                            {fcTestResult.message}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            检测到的格式: {fcTestResult.apiFormatDetected}
+                          </p>
+                          {fcTestResult.success && fcTestResult.todosCreated > 0 && (
+                            <p className="text-xs text-green-700 mt-1">
+                              ✓ 任务列表已自动刷新，请切换到"列表"视图查看
+                            </p>
+                          )}
+                          {fcTestResult.recommendations && fcTestResult.recommendations.length > 0 && (
+                            <div className="mt-2 text-xs text-gray-700">
+                              <p className="font-semibold">建议：</p>
+                              <ul className="list-disc list-inside">
+                                {fcTestResult.recommendations.map((rec: string, i: number) => (
+                                  <li key={i}>{rec}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

@@ -108,6 +108,16 @@ pub fn get_function_definitions() -> Vec<FunctionDefinition> {
     ]
 }
 
+pub fn get_tools() -> Vec<crate::models::ai::Tool> {
+    get_function_definitions()
+        .into_iter()
+        .map(|func_def| crate::models::ai::Tool {
+            tool_type: "function".to_string(),
+            function: func_def,
+        })
+        .collect()
+}
+
 pub fn get_function_infos() -> Vec<FunctionInfo> {
     get_function_definitions()
         .into_iter()
@@ -276,4 +286,108 @@ impl FunctionExecutor {
             )
         }))
     }
+}
+
+// ===== Text Parsing Fallback =====
+
+#[derive(Debug)]
+pub struct ExtractedFunctionCall {
+    pub name: String,
+    pub arguments: String,
+    pub original_text: String,
+}
+
+/// Parse function calls from text content (fallback for APIs that don't support structured calling)
+pub fn parse_function_calls_from_text(content: &str) -> Vec<ExtractedFunctionCall> {
+    let mut calls = Vec::new();
+
+    // Pattern 1: XML-like tags: <tool_call>add_todos {"todos": [...]}</tool_call>
+    if let Some(start) = content.find("<tool_call>") {
+        if let Some(end) = content[start..].find("</tool_call>") {
+            let call_text = &content[start + 11..start + end];
+            if let Some((name, args)) = parse_function_call_content(call_text) {
+                calls.push(ExtractedFunctionCall {
+                    name,
+                    arguments: args,
+                    original_text: content[start..start + end + 12].to_string(),
+                });
+            }
+        }
+    }
+
+    // Pattern 2: JSON function call objects
+    // {"function":"add_todos","arguments":{...}}
+    let json_pattern = regex::Regex::new(r#"\{"function"\s*:\s*"(\w+)"\s*,\s*"arguments"\s*:\s*(\{[^\}]*\})\}"#)
+        .unwrap();
+
+    for cap in json_pattern.captures_iter(content) {
+        if let (Some(name), Some(args)) = (cap.get(1), cap.get(2)) {
+            calls.push(ExtractedFunctionCall {
+                name: name.as_str().to_string(),
+                arguments: args.as_str().to_string(),
+                original_text: cap.get(0).unwrap().as_str().to_string(),
+            });
+        }
+    }
+
+    // Pattern 3: Function name followed by JSON
+    // add_todos {"todos": [...]}
+    let func_names = ["add_todos", "complete_todo", "delete_todo", "query_todos", "get_statistics"];
+    for func_name in &func_names {
+        if let Some(pos) = content.find(func_name) {
+            // Look for JSON object after function name
+            let after = &content[pos + func_name.len()..].trim_start();
+            if after.starts_with('{') {
+                if let Some(json_end) = find_json_end(after) {
+                    let args = &after[..json_end];
+                    calls.push(ExtractedFunctionCall {
+                        name: func_name.to_string(),
+                        arguments: args.to_string(),
+                        original_text: format!("{} {}", func_name, args),
+                    });
+                }
+            }
+        }
+    }
+
+    calls
+}
+
+fn parse_function_call_content(text: &str) -> Option<(String, String)> {
+    let parts: Vec<&str> = text.splitn(2, ' ').collect();
+    if parts.len() == 2 {
+        let name = parts[0].trim().to_string();
+        let args = parts[1].trim().to_string();
+        Some((name, args))
+    } else {
+        None
+    }
+}
+
+fn find_json_end(text: &str) -> Option<usize> {
+    let mut depth = 0;
+    let mut in_string = false;
+    let mut escape_next = false;
+
+    for (i, ch) in text.chars().enumerate() {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+
+        match ch {
+            '\\' => escape_next = true,
+            '"' => in_string = !in_string,
+            '{' if !in_string => depth += 1,
+            '}' if !in_string => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i + 1);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
 }

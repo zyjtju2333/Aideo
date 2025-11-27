@@ -34,5 +34,6 @@ export interface AiChatResponse<TTodo = unknown> {
   message: string;
   functionResults?: FunctionResult[];
   updatedTodos?: TTodo[];
+  warnings?: string[];
 }
 

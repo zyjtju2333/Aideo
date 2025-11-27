@@ -9,7 +9,20 @@ type BackendSettings = {
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+  functionCallingMode?: string;
+  enableTextFallback?: boolean;
 };
+
+export interface FunctionCallTestResult {
+  success: boolean;
+  message: string;
+  apiFormatDetected: string;
+  functionCalled: boolean;
+  functionName?: string;
+  todosCreated: number;
+  rawResponseSample?: string;
+  recommendations: string[];
+}
 
 export const settingsService = {
   async get(): Promise<Settings> {
@@ -21,6 +34,8 @@ export const settingsService = {
       temperature: raw.temperature,
       maxTokens: raw.maxTokens,
       systemPrompt: raw.systemPrompt,
+      functionCallingMode: raw.functionCallingMode ?? "auto",
+      enableTextFallback: raw.enableTextFallback ?? true,
     };
   },
 
@@ -33,6 +48,8 @@ export const settingsService = {
         temperature: settings.temperature,
         maxTokens: settings.maxTokens,
         systemPrompt: settings.systemPrompt,
+        functionCallingMode: settings.functionCallingMode ?? "auto",
+        enableTextFallback: settings.enableTextFallback ?? true,
       },
     });
   },
@@ -48,6 +65,10 @@ export const settingsService = {
         systemPrompt: settings.systemPrompt,
       },
     }) as Promise<boolean>;
+  },
+
+  async testFunctionCalling(): Promise<FunctionCallTestResult> {
+    return invoke("test_function_calling") as Promise<FunctionCallTestResult>;
   },
 };
 

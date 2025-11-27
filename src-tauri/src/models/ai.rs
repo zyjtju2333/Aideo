@@ -7,9 +7,13 @@ pub struct ChatCompletionRequest {
     pub model: String,
     pub messages: Vec<ChatMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub functions: Option<Vec<FunctionDefinition>>,
+    pub functions: Option<Vec<FunctionDefinition>>,  // Legacy
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub function_call: Option<String>,
+    pub function_call: Option<String>,               // Legacy
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<Tool>>,                    // Modern
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_choice: Option<String>,                 // Modern
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,7 +30,11 @@ pub struct ChatMessage {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub function_call: Option<FunctionCall>,
+    pub function_call: Option<FunctionCall>,  // Legacy format
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<ToolCall>>,    // Modern format
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<String>,          // For tool response messages
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +48,23 @@ pub struct FunctionDefinition {
     pub name: String,
     pub description: String,
     pub parameters: serde_json::Value,
+}
+
+// ===== Modern Tools Format (OpenAI v1.1.0+) =====
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Tool {
+    #[serde(rename = "type")]
+    pub tool_type: String, // Always "function"
+    pub function: FunctionDefinition,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolCall {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub tool_type: String,
+    pub function: FunctionCall,
 }
 
 // ===== OpenAI API 响应结构 =====
@@ -96,6 +121,7 @@ pub struct AiChatResponse {
     pub message: String,
     pub function_results: Option<Vec<FunctionResult>>,
     pub updated_todos: Option<Vec<super::todo::Todo>>,
+    pub warnings: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::models::ai::*;
 use crate::models::settings::Settings;
 use crate::db::{TodoRepository, SettingsRepository};
-use crate::services::function_call::{FunctionExecutor, get_function_definitions};
+use crate::services::function_call::{FunctionExecutor, get_function_definitions, get_tools};
 use crate::error::AppError;
 
 pub struct AiService {
@@ -59,6 +59,8 @@ impl AiService {
             content: Some(system_prompt),
             name: None,
             function_call: None,
+            tool_calls: None,
+            tool_call_id: None,
         });
 
         // 添加历史消息
@@ -74,6 +76,8 @@ impl AiService {
             content: Some(request.message.clone()),
             name: None,
             function_call: None,
+            tool_calls: None,
+            tool_call_id: None,
         });
 
         messages
@@ -87,16 +91,57 @@ impl AiService {
         let todos = self.todo_repo.get_all(None)?;
         let mut messages = self.build_messages(&settings, &request, &todos);
         let mut function_results = Vec::new();
+        let mut warnings = Vec::new();
 
         // Function Call 循环，最多 5 次
-        for _ in 0..5 {
+        for iteration in 0..5 {
+            log::debug!("Function call loop iteration {}", iteration);
+
             let response = self.call_api(&settings, &messages, false).await?;
             let choice = response.choices.first()
                 .ok_or_else(|| AppError::ApiError("No response choice".into()))?;
 
-            // 检查是否有 function_call
+            log::debug!("Response finish_reason: {:?}", choice.finish_reason);
+
+            // Check for function calls in modern tools format
+            if let Some(ref tool_calls) = choice.message.tool_calls {
+                log::info!("Detected {} tool calls (modern format)", tool_calls.len());
+
+                for tool_call in tool_calls {
+                    if tool_call.tool_type == "function" {
+                        let result = self.function_executor.execute(
+                            &tool_call.function.name,
+                            &tool_call.function.arguments
+                        )?;
+
+                        function_results.push(FunctionResult {
+                            function_name: tool_call.function.name.clone(),
+                            success: true,
+                            result: result.clone(),
+                        });
+
+                        // Add assistant message with tool call
+                        messages.push(choice.message.clone());
+
+                        // Add tool response message
+                        messages.push(ChatMessage {
+                            role: "tool".to_string(),
+                            name: Some(tool_call.function.name.clone()),
+                            content: Some(serde_json::to_string(&result)?),
+                            function_call: None,
+                            tool_calls: None,
+                            tool_call_id: Some(tool_call.id.clone()),
+                        });
+                    }
+                }
+
+                continue; // Continue loop for AI to process results
+            }
+
+            // Check for function call in legacy format
             if let Some(ref fc) = choice.message.function_call {
-                // 执行 function
+                log::info!("Detected function call (legacy format): {}", fc.name);
+
                 let result = self.function_executor.execute(&fc.name, &fc.arguments)?;
 
                 function_results.push(FunctionResult {
@@ -105,22 +150,76 @@ impl AiService {
                     result: result.clone(),
                 });
 
-                // 将 assistant 的 function_call 消息添加到历史
+                // Add assistant message
                 messages.push(choice.message.clone());
 
-                // 将 function 结果添加到历史
+                // Add function result
                 messages.push(ChatMessage {
                     role: "function".to_string(),
                     name: Some(fc.name.clone()),
                     content: Some(serde_json::to_string(&result)?),
                     function_call: None,
+                    tool_calls: None,
+                    tool_call_id: None,
                 });
 
-                // 继续循环，让 AI 处理 function 结果
-                continue;
+                continue; // Continue loop
             }
 
-            // 没有 function_call，返回最终响应
+            // No structured function call detected - check text fallback if enabled
+            if settings.enable_text_fallback {
+                if let Some(ref content) = choice.message.content {
+                    let extracted = crate::services::function_call::parse_function_calls_from_text(content);
+
+                    if !extracted.is_empty() {
+                        log::warn!("Extracted {} function calls from text (fallback mode)", extracted.len());
+                        warnings.push(
+                            "Function calls were parsed from text instead of structured format. Your API may not fully support function calling.".to_string()
+                        );
+
+                        let mut cleaned_content = content.clone();
+
+                        for call in extracted {
+                            let result = self.function_executor.execute(&call.name, &call.arguments)?;
+
+                            function_results.push(FunctionResult {
+                                function_name: call.name.clone(),
+                                success: true,
+                                result: result.clone(),
+                            });
+
+                            // Remove the function call from text
+                            cleaned_content = cleaned_content.replace(&call.original_text, "");
+                        }
+
+                        // Add message with cleaned text
+                        messages.push(ChatMessage {
+                            role: "assistant".to_string(),
+                            content: Some(cleaned_content.trim().to_string()),
+                            name: None,
+                            function_call: None,
+                            tool_calls: None,
+                            tool_call_id: None,
+                        });
+
+                        // Add function results to message history
+                        for result in &function_results {
+                            messages.push(ChatMessage {
+                                role: "function".to_string(),
+                                name: Some(result.function_name.clone()),
+                                content: Some(serde_json::to_string(&result.result)?),
+                                function_call: None,
+                                tool_calls: None,
+                                tool_call_id: None,
+                            });
+                        }
+
+                        continue; // Continue loop
+                    }
+                }
+            }
+
+            // No function call detected - return final response
             let final_message = choice.message.content.clone().unwrap_or_default();
             let updated_todos = self.todo_repo.get_all(None)?;
 
@@ -132,6 +231,11 @@ impl AiService {
                     Some(function_results)
                 },
                 updated_todos: Some(updated_todos),
+                warnings: if warnings.is_empty() {
+                    None
+                } else {
+                    Some(warnings)
+                },
             });
         }
 
@@ -149,11 +253,37 @@ impl AiService {
         let api_key = settings.api_key.as_ref()
             .ok_or(AppError::MissingApiKey)?;
 
+        // Determine which format to use (same logic as call_api)
+        let (use_tools_format, use_functions_format) = match settings.function_calling_mode.as_str() {
+            "tools" => (true, false),
+            "functions" => (false, true),
+            "disabled" => (false, false),
+            _ => (true, true),  // "auto"
+        };
+
         let req_body = ChatCompletionRequest {
             model: settings.model.clone(),
             messages,
-            functions: Some(get_function_definitions()),
-            function_call: Some("auto".to_string()),
+            functions: if use_functions_format {
+                Some(get_function_definitions())
+            } else {
+                None
+            },
+            function_call: if use_functions_format {
+                Some("auto".to_string())
+            } else {
+                None
+            },
+            tools: if use_tools_format {
+                Some(get_tools())
+            } else {
+                None
+            },
+            tool_choice: if use_tools_format {
+                Some("auto".to_string())
+            } else {
+                None
+            },
             temperature: Some(settings.temperature),
             max_tokens: Some(settings.max_tokens),
             stream: Some(true),
@@ -245,15 +375,49 @@ impl AiService {
         let api_key = settings.api_key.as_ref()
             .ok_or(AppError::MissingApiKey)?;
 
+        // Determine which format to use
+        let (use_tools_format, use_functions_format) = match settings.function_calling_mode.as_str() {
+            "tools" => (true, false),
+            "functions" => (false, true),
+            "disabled" => (false, false),
+            _ => (true, true),  // "auto" - try tools first, include functions as fallback
+        };
+
         let req_body = ChatCompletionRequest {
             model: settings.model.clone(),
             messages: messages.to_vec(),
-            functions: Some(get_function_definitions()),
-            function_call: Some("auto".to_string()),
+            functions: if use_functions_format {
+                Some(get_function_definitions())
+            } else {
+                None
+            },
+            function_call: if use_functions_format {
+                Some("auto".to_string())
+            } else {
+                None
+            },
+            tools: if use_tools_format {
+                Some(get_tools())
+            } else {
+                None
+            },
+            tool_choice: if use_tools_format {
+                Some("auto".to_string())
+            } else {
+                None
+            },
             temperature: Some(settings.temperature),
             max_tokens: Some(settings.max_tokens),
             stream: Some(stream),
         };
+
+        // Debug logging before sending request
+        log::debug!("Sending API request to {}", settings.api_base_url);
+        log::debug!("Model: {}, Tools: {}, Functions: {}",
+            req_body.model,
+            use_tools_format,
+            use_functions_format
+        );
 
         let response = self.http_client
             .post(format!("{}/chat/completions", settings.api_base_url))
@@ -267,10 +431,19 @@ impl AiService {
             let status = response.status();
             let error_text = response.text().await?;
             log::error!("AI API error (status {}): {}", status, error_text);
-            return Err(AppError::ApiError(error_text));
+            return Err(AppError::ApiError(format!("HTTP {}: {}", status, error_text)));
         }
 
-        let result = response.json().await?;
+        // Parse response with detailed logging
+        let response_text = response.text().await?;
+        log::debug!("Raw API response: {}", response_text);
+
+        let result: ChatCompletionResponse = serde_json::from_str(&response_text)
+            .map_err(|e| {
+                log::error!("Failed to parse API response: {}", e);
+                AppError::ApiError(format!("Invalid JSON response: {}", e))
+            })?;
+
         Ok(result)
     }
 }

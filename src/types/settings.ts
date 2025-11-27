@@ -5,6 +5,8 @@ export interface Settings {
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
+  functionCallingMode?: string;
+  enableTextFallback?: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -14,6 +16,8 @@ export const DEFAULT_SETTINGS: Settings = {
   temperature: 0.7,
   maxTokens: 2048,
   systemPrompt: "",
+  functionCallingMode: "auto",
+  enableTextFallback: true,
 };
 
 export const AI_PROVIDERS = {
