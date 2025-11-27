@@ -176,7 +176,7 @@ const App: React.FC = () => {
     try {
       setTestingApi(true);
       setApiTestResult(null);
-      const ok = await settingsService.testApiConnection();
+      const ok = await settingsService.testApiConnection(settings);
       setApiTestResult(ok);
     } catch (err) {
       console.error("Test API failed", err);

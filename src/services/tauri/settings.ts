@@ -37,8 +37,17 @@ export const settingsService = {
     });
   },
 
-  async testApiConnection(): Promise<boolean> {
-    return invoke("test_api_connection") as Promise<boolean>;
+  async testApiConnection(settings: Settings): Promise<boolean> {
+    return invoke("test_api_connection", {
+      settings: {
+        apiKey: settings.apiKey || null,
+        apiBaseUrl: settings.apiBaseUrl,
+        model: settings.model,
+        temperature: settings.temperature,
+        maxTokens: settings.maxTokens,
+        systemPrompt: settings.systemPrompt,
+      },
+    }) as Promise<boolean>;
   },
 };
 
