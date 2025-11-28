@@ -7,6 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.claude
+.pnpm-store
+.vscode
+
 # Node.js dependencies
 node_modules
 dist
