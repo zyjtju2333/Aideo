@@ -13,8 +13,13 @@
     "windows": [
       {
         "title": "aideo",
-        "width": 800,
-        "height": 600
+        "width": 480,
+        "height": 640,
+        "minWidth": 360,
+        "minHeight": 480,
+        "maxWidth": 600,
+        "maxHeight": 900,
+        "resizable": true
       }
     ],
     "security": {

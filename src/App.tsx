@@ -25,6 +25,7 @@ import type { Settings } from "@/types/settings";
 import type { AiChatRequest, ApiChatMessage, UiMessage } from "@/types/chat";
 
 type View = "list" | "summary" | "settings";
+type OverlayState = "chat" | null;
 
 const App: React.FC = () => {
   // --- State ---
@@ -47,8 +48,10 @@ const App: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [fcTestResult, setFcTestResult] = useState<any>(null);
 
+  // Overlay State (AI chat, etc.)
+  const [overlay, setOverlay] = useState<OverlayState>(null);
+
   // AI Chat State
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<UiMessage[]>([
     {
@@ -85,7 +88,7 @@ const App: React.FC = () => {
   // Scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping, isChatOpen]);
+  }, [messages, isTyping, overlay]);
 
   // --- Derived ---
   const activeTodos = todos.filter(
@@ -124,6 +127,8 @@ const App: React.FC = () => {
       console.error("Error batch creating todos", err);
     }
   };
+  // referenced to keep for future AI 批量创建任务集成
+  void handleBatchAddTodos;
 
   const toggleComplete = async (todo: Todo) => {
     try {
@@ -158,6 +163,15 @@ const App: React.FC = () => {
       setTodos((prev) => prev.filter((t) => t.id !== todo.id));
     } catch (err) {
       console.error("Error deleting todo", err);
+    }
+  };
+
+  const loadTodos = async () => {
+    try {
+      const loadedTodos = await todoService.getAll();
+      setTodos(loadedTodos);
+    } catch (err) {
+      console.error("Error loading todos", err);
     }
   };
 
@@ -247,13 +261,14 @@ const App: React.FC = () => {
       setMessages((prev) => [...prev, aiMsg]);
 
       // Display warnings if any
-      if (response.warnings && response.warnings.length > 0) {
+      const warnings = response.warnings ?? [];
+      if (warnings.length > 0) {
         setMessages((prev) => [
           ...prev,
           {
             id: `warning-${Date.now()}`,
             role: "system",
-            content: "⚠️ " + response.warnings.join("\n"),
+            content: "⚠️ " + warnings.join("\n"),
           },
         ]);
       }
@@ -297,8 +312,8 @@ const App: React.FC = () => {
     const [showMenu, setShowMenu] = useState(false);
 
     return (
-      <div className="group flex items-center justify-between p-3 mb-2 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-all duration-200">
-        <div className="flex items-center gap-3 flex-1">
+      <div className="group flex items-center justify-between p-2.5 mb-1.5 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-all duration-200">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <button
             type="button"
             onClick={() => toggleComplete(todo)}
@@ -309,13 +324,13 @@ const App: React.FC = () => {
             }`}
           >
             {todo.completed ? (
-              <CheckCircle2 size={20} className="text-green-500" />
+              <CheckCircle2 size={16} className="text-green-500" />
             ) : (
-              <Circle size={20} />
+              <Circle size={16} />
             )}
           </button>
           <span
-            className={`text-sm font-medium transition-all duration-200 ${
+            className={`text-xs font-medium transition-all duration-200 truncate ${
               todo.completed ? "text-gray-400 line-through" : "text-gray-700"
             }`}
           >
@@ -346,7 +361,7 @@ const App: React.FC = () => {
                     void updateStatus(todo, "cancelled");
                     setShowMenu(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full text-left px-2.5 py-1.5 text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-2"
                 >
                   <Archive size={12} /> 归档放弃
                 </button>
@@ -356,7 +371,7 @@ const App: React.FC = () => {
                     void deleteTodo(todo);
                     setShowMenu(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 flex items-center gap-2"
+                  className="w-full text-left px-2.5 py-1.5 text-[10px] text-red-500 hover:bg-red-50 flex items-center gap-2"
                 >
                   <Trash2 size={12} /> 直接删除
                 </button>
@@ -370,89 +385,91 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F7F5] text-gray-400">
-        <Loader2 className="animate-spin" />
+      <div className="h-screen flex items-center justify-center bg-[#F7F7F5] text-gray-400">
+        <Loader2 className="animate-spin" size={20} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F7F5] text-[#37352F] font-sans selection:bg-[#CDE8F0]">
+    <div className="h-screen bg-[#F7F7F5] text-[#37352F] font-sans selection:bg-[#CDE8F0] flex flex-col overflow-hidden">
       {/* --- Main Layout --- */}
-      <div className="max-w-2xl mx-auto pt-12 pb-24 px-6">
+      <div className="flex flex-col h-full px-4">
         {/* Header */}
-        <header className="mb-10 flex items-start justify-between">
+        <header className="mb-4 py-3 flex items-center justify-between flex-shrink-0">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-800 flex items-center gap-2">
+            <h1 className="text-lg font-bold tracking-tight text-gray-800 flex items-center gap-2">
               <span className="bg-black text-white p-1 rounded-md">
-                <CheckCircle2 size={20} />
+                <CheckCircle2 size={16} />
               </span>
               Aideo
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className="text-gray-500 text-[10px] mt-0.5 hidden sm:block">
               本地数据库已就绪，支持离线任务管理。
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <div className="flex bg-gray-200 p-1 rounded-lg h-9">
+          <div className="flex gap-1.5">
+            <div className="flex bg-gray-200 p-1 rounded-lg h-8">
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className={`px-3 flex items-center rounded-md text-sm font-medium transition-all ${
+                className={`px-2 flex items-center rounded-md text-xs font-medium transition-all ${
                   view === "list"
                     ? "bg-white shadow-sm text-black"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <ListTodo size={14} className="mr-1" /> 列表
+                <ListTodo size={12} className="mr-1" /> 列表
               </button>
               <button
                 type="button"
                 onClick={() => setView("summary")}
-                className={`px-3 flex items-center rounded-md text-sm font-medium transition-all ${
+                className={`px-2 flex items-center rounded-md text-xs font-medium transition-all ${
                   view === "summary"
                     ? "bg-white shadow-sm text-black"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Calendar size={14} className="mr-1" /> 回顾
+                <Calendar size={12} className="mr-1" /> 回顾
               </button>
             </div>
             <button
               type="button"
               onClick={() => setView("settings")}
-              className={`h-9 w-9 flex items-center justify-center rounded-lg transition-all ${
+              className={`h-8 w-8 flex items-center justify-center rounded-lg transition-all ${
                 view === "settings"
                   ? "bg-gray-800 text-white"
                   : "bg-gray-200 text-gray-500 hover:text-gray-800"
               }`}
             >
-              <SettingsIcon size={16} />
+              <SettingsIcon size={14} />
             </button>
           </div>
         </header>
 
-        {/* --- View: Todo List --- */}
-        {view === "list" && (
-          <div className="animate-in fade-in duration-500">
+        {/* --- Main Content --- */}
+        <main className="flex-1 overflow-y-auto pb-12">
+          {/* --- View: Todo List --- */}
+          {view === "list" && (
+            <div className="animate-in fade-in duration-500">
             {/* Input Area */}
             <form onSubmit={handleAddTodo} className="relative mb-8 group">
               <div className="absolute left-3 top-3 text-gray-400">
-                <Plus size={20} />
+                <Plus size={16} />
               </div>
               <input
                 type="text"
                 value={newTodoInput}
                 onChange={(e) => setNewTodoInput(e.target.value)}
                 placeholder="写下你今天最重要的一件事..."
-                className="w-full pl-10 pr-4 py-3 bg-transparent border-b-2 border-gray-200 focus:border-gray-800 outline-none text-lg placeholder:text-gray-300 transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-transparent border-b-2 border-gray-200 focus:border-gray-800 outline-none text-sm placeholder:text-gray-300 transition-colors"
               />
             </form>
 
             {/* Tasks */}
             <div className="space-y-1">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
+              <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
                 进行中
               </h2>
               {activeTodos.length === 0 ? (
@@ -469,18 +486,18 @@ const App: React.FC = () => {
             {/* Archived */}
             {archivedTodos.length > 0 && (
               <div className="mt-12 opacity-60">
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
-                  <Archive size={12} /> 已归档 / 放弃
+                <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
+                  <Archive size={11} /> 已归档 / 放弃
                 </h2>
                 {archivedTodos.map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex items-center gap-3 p-3 mb-2 border-b border-gray-100"
+                    className="flex items-center gap-2 p-2.5 mb-1.5 border-b border-gray-100"
                   >
-                    <div className="w-5 h-5 rounded-full border border-gray-200 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-gray-300 rounded-full" />
+                    <div className="w-4 h-4 rounded-full border border-gray-200 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
                     </div>
-                    <span className="text-sm text-gray-400 line-through">
+                    <span className="text-xs text-gray-400 line-through">
                       {todo.text}
                     </span>
                     <button
@@ -500,30 +517,30 @@ const App: React.FC = () => {
         {/* --- View: Summary --- */}
         {view === "summary" && (
           <div className="animate-in slide-in-from-right-4 duration-300">
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                <div className="text-3xl font-bold text-gray-800 mb-1">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <div className="text-2xl font-bold text-gray-800 mb-1">
                   {completedCount}
                 </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wide">
                   已完成任务
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                <div className="text-3xl font-bold text-gray-800 mb-1">
+              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <div className="text-2xl font-bold text-gray-800 mb-1">
                   {activeTodos.length}
                 </div>
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wide">
                   待办任务
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-6">
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-4">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles size={16} className="text-yellow-500" /> AI 智能周报
+                <Sparkles size={14} className="text-yellow-500" /> AI 智能周报
               </h3>
-              <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600 leading-relaxed">
+              <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600 leading-relaxed">
                 {!settings.apiKey && (
                   <div className="text-xs text-orange-500 mb-2 font-medium flex items-center gap-1">
                     <AlertCircle size={12} />
@@ -549,10 +566,10 @@ const App: React.FC = () => {
           <div className="animate-in slide-in-from-right-4 duration-300">
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <SettingsIcon size={20} /> 设置
+                <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                  <SettingsIcon size={16} /> 设置
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   配置应用参数和 AI 模型连接。
                 </p>
               </div>
@@ -560,14 +577,14 @@ const App: React.FC = () => {
               <div className="p-6 space-y-6">
                 {/* Database Section */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                    <Database size={16} className="text-blue-500" /> 数据库状态
+                  <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                    <Database size={14} className="text-blue-500" /> 数据库状态
                   </h3>
-                  <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-lg flex items-center justify-between">
+                  <div className="bg-blue-50 text-blue-800 text-xs p-4 rounded-lg flex items-center justify-between">
                     <span>
                       <span className="font-bold">本地数据库已连接</span>
                       <br />
-                      <span className="text-xs opacity-75">
+                      <span className="text-[10px] opacity-75">
                         所有数据保存在本机，无需登录账号。
                       </span>
                     </span>
@@ -579,19 +596,19 @@ const App: React.FC = () => {
 
                 {/* LLM Section */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                    <Bot size={16} className="text-purple-500" /> LLM 模型配置
+                  <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                    <Bot size={14} className="text-purple-500" /> LLM 模型配置
                   </h3>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">
+                      <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
                         API Key
                       </label>
                       <div className="relative">
                         <Key
-                          size={16}
-                          className="absolute left-3 top-3 text-gray-400"
+                          size={14}
+                          className="absolute left-3 top-2.5 text-gray-400"
                         />
                         <input
                           type="password"
@@ -603,17 +620,17 @@ const App: React.FC = () => {
                             }))
                           }
                           placeholder="输入 OpenAI / DeepSeek 等服务的 API Key..."
-                          className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
                         />
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-[9px] text-gray-400 mt-1">
                         密钥仅保存在本地数据库中，不会上传到任何服务器。
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">
+                        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
                           Base URL
                         </label>
                         <input
@@ -625,11 +642,11 @@ const App: React.FC = () => {
                               apiBaseUrl: e.target.value,
                             }))
                           }
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase">
+                        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
                           模型名称 (Model)
                         </label>
                         <input
@@ -642,7 +659,7 @@ const App: React.FC = () => {
                             }))
                           }
                           placeholder="例如: gpt-4o-mini / deepseek-chat"
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -672,44 +689,66 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Advanced Settings */}
-                    <div className="space-y-3 pt-3 border-t border-gray-200">
-                      <h4 className="text-xs font-semibold text-gray-700 uppercase">高级设置</h4>
+                    <details className="mt-3 border-t border-gray-200 pt-3 text-xs">
+                      <summary className="flex items-center justify-between cursor-pointer select-none">
+                        <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-700 uppercase">
+                          高级设置
+                        </span>
+                        <span className="text-[9px] text-gray-400">
+                          可选扩展功能
+                        </span>
+                      </summary>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          函数调用模式
-                        </label>
-                        <select
-                          value={settings.functionCallingMode || 'auto'}
-                          onChange={(e) => setSettings({ ...settings, functionCallingMode: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                        >
-                          <option value="auto">自动（推荐）</option>
-                          <option value="tools">仅现代格式（Tools）</option>
-                          <option value="functions">仅旧版格式（Functions）</option>
-                          <option value="disabled">禁用函数调用</option>
-                        </select>
-                        <p className="text-xs text-gray-500 mt-1">
-                          自动模式会尝试两种格式以获得最佳兼容性
+                      <div className="mt-2 space-y-3">
+                        <div>
+                          <label className="block text-[10px] font-medium text-gray-600 mb-1">
+                            函数调用模式
+                          </label>
+                          <select
+                            value={settings.functionCallingMode || "auto"}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                functionCallingMode: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded text-xs"
+                          >
+                            <option value="auto">自动（推荐）</option>
+                            <option value="tools">仅现代格式（Tools）</option>
+                            <option value="functions">仅旧版格式（Functions）</option>
+                            <option value="disabled">禁用函数调用</option>
+                          </select>
+                          <p className="text-[9px] text-gray-500 mt-1">
+                            自动模式会尝试两种格式以获得最佳兼容性
+                          </p>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="enableTextFallback"
+                            checked={settings.enableTextFallback !== false}
+                            onChange={(e) =>
+                              setSettings({
+                                ...settings,
+                                enableTextFallback: e.target.checked,
+                              })
+                            }
+                            className="rounded"
+                          />
+                          <label
+                            htmlFor="enableTextFallback"
+                            className="text-xs text-gray-700"
+                          >
+                            启用文本解析降级（推荐）
+                          </label>
+                        </div>
+                        <p className="text-[9px] text-gray-500 ml-6">
+                          当 API 不支持结构化函数调用时，尝试从文本中解析函数调用
                         </p>
                       </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="enableTextFallback"
-                          checked={settings.enableTextFallback !== false}
-                          onChange={(e) => setSettings({ ...settings, enableTextFallback: e.target.checked })}
-                          className="rounded"
-                        />
-                        <label htmlFor="enableTextFallback" className="text-sm text-gray-700">
-                          启用文本解析降级（推荐）
-                        </label>
-                      </div>
-                      <p className="text-xs text-gray-500 ml-6">
-                        当 API 不支持结构化函数调用时，尝试从文本中解析函数调用
-                      </p>
-                    </div>
+                    </details>
 
                     {/* Function Calling Test */}
                     <div className="space-y-2 pt-3 border-t border-gray-200">
@@ -717,13 +756,13 @@ const App: React.FC = () => {
                         type="button"
                         onClick={handleTestFunctionCalling}
                         disabled={isTesting}
-                        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm"
+                        className="px-4 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-xs"
                       >
                         {isTesting ? "测试中..." : "测试函数调用"}
                       </button>
 
                       {fcTestResult && (
-                        <div className={`p-3 rounded text-sm ${fcTestResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                        <div className={`p-3 rounded text-xs ${fcTestResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                           <p className={`font-semibold ${fcTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
                             {fcTestResult.message}
                           </p>
@@ -757,168 +796,184 @@ const App: React.FC = () => {
                   type="button"
                   onClick={() => void saveSettings()}
                   disabled={savingSettings}
-                  className="flex items-center gap-2 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-all active:scale-95 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-all active:scale-95 text-xs font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {savingSettings && (
-                    <Loader2 size={16} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                   )}
-                  <Save size={16} /> 保存配置
+                  <Save size={14} /> 保存配置
                 </button>
               </div>
             </div>
           </div>
         )}
+        </main>
       </div>
 
-      {/* --- AI Floating Button & Chat --- */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        {/* Chat Window */}
-        {isChatOpen && (
-          <div className="bg-white w-[340px] h-[500px] rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-200 origin-bottom-right">
-            {/* Chat Header */}
-            <div className="p-4 border-b border-gray-50 bg-gray-50/50 backdrop-blur flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="bg-gradient-to-tr from-purple-500 to-indigo-500 text-white p-1.5 rounded-lg">
-                  <Bot size={16} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-sm text-gray-700">
-                    AI 效率助手
-                  </span>
-                  <span className="text-[10px] text-gray-400 leading-none">
-                    {settings.apiKey ? "Online" : "需要配置 API Key"}
-                  </span>
-                </div>
+      {/* --- AI Chat Bottom Sheet & FAB --- */}
+      {/* Chat Bottom Sheet */}
+      <div
+        className={`
+          fixed bottom-0 left-0 right-0 z-40
+          bg-white border-t border-gray-200 shadow-2xl
+          transition-transform duration-300 ease-out will-change-transform
+          ${overlay === "chat" ? "translate-y-0" : "translate-y-full"}
+        `}
+        style={{ height: "70vh" }}
+      >
+        <div className="h-full flex flex-col">
+          {/* Chat Header */}
+          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/80 backdrop-blur flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-gradient-to-tr from-purple-500 to-indigo-500 text-white p-1 rounded-lg">
+                <Bot size={14} />
               </div>
-              <button
-                type="button"
-                onClick={() => setIsChatOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
+              <div className="flex flex-col">
+                <span className="font-semibold text-xs text-gray-700">
+                  AI 效率助手
+                </span>
+                <span className="text-[10px] text-gray-400 leading-none">
+                  {settings.apiKey ? "Online" : "需要配置 API Key"}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOverlay(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-white text-xs">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${
+                  msg.role === "user"
+                    ? "justify-end"
+                    : msg.role === "system"
+                      ? "justify-center"
+                      : "justify-start"
+                }`}
               >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.role === "user"
-                      ? "justify-end"
-                      : msg.role === "system"
-                        ? "justify-center"
-                        : "justify-start"
-                  }`}
-                >
-                  {msg.role === "system" ? (
-                    <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
-                      {msg.content}
-                    </span>
-                  ) : (
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-black text-white rounded-br-none"
-                          : "bg-gray-100 text-gray-800 rounded-bl-none"
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-2xl rounded-bl-none px-4 py-3 flex gap-1 items-center">
-                    <div
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <div
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <div
-                      className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
+                {msg.role === "system" ? (
+                  <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                    {msg.content}
+                  </span>
+                ) : (
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3 py-2 leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-black text-white rounded-br-none"
+                        : "bg-gray-100 text-gray-800 rounded-bl-none"
+                    }`}
+                  >
+                    {msg.content}
                   </div>
+                )}
+              </div>
+            ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl rounded-bl-none px-3 py-2 flex gap-1 items-center">
+                  <div
+                    className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  />
+                  <div
+                    className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  />
                 </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Quick Actions */}
-            {messages.length <= 1 && (
-              <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChatInput("帮我把这个大目标拆成可执行的小任务");
-                    void handleSendChat();
-                  }}
-                  className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 rounded-full border border-gray-200 transition"
-                >
-                  ✨ 生成项目计划
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChatInput("帮我总结一下本周的完成情况");
-                    void handleSendChat();
-                  }}
-                  className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-xs text-gray-600 rounded-full border border-gray-200 transition"
-                >
-                  📊 总结本周
-                </button>
               </div>
             )}
+            <div ref={chatEndRef} />
+          </div>
 
-            {/* Input */}
-            <div className="p-3 bg-white border-t border-gray-50">
-              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-4 py-2 border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
-                <input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void handleSendChat()}
-                  placeholder="问问 AI..."
-                  className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleSendChat()}
-                  disabled={!chatInput.trim()}
-                  className={`p-1.5 rounded-full transition-all ${
-                    chatInput.trim()
-                      ? "bg-black text-white hover:bg-gray-800"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <Send size={14} />
-                </button>
-              </div>
+          {/* Quick Actions */}
+          {messages.length <= 1 && (
+            <div className="px-3 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+              <button
+                type="button"
+                onClick={() => {
+                  setChatInput("帮我把这个大目标拆成可执行的小任务");
+                  void handleSendChat();
+                }}
+                className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-[10px] text-gray-600 rounded-full border border-gray-200 transition"
+              >
+                ✨ 生成项目计划
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatInput("帮我总结一下本周的完成情况");
+                  void handleSendChat();
+                }}
+                className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-[10px] text-gray-600 rounded-full border border-gray-200 transition"
+              >
+                📊 总结本周
+              </button>
+            </div>
+          )}
+
+          {/* Input */}
+          <div className="px-3 pb-3 bg-white border-t border-gray-50">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-2 border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void handleSendChat()}
+                placeholder="问问 AI..."
+                className="flex-1 bg-transparent outline-none text-xs text-gray-700 placeholder:text-gray-400"
+              />
+              <button
+                type="button"
+                onClick={() => void handleSendChat()}
+                disabled={!chatInput.trim()}
+                className={`p-1.5 rounded-full transition-all ${
+                  chatInput.trim()
+                    ? "bg-black text-white hover:bg-gray-800"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <Send size={12} />
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Toggle Button */}
-        <button
-          type="button"
-          onClick={() => setIsChatOpen((v) => !v)}
-          className={`h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
-            isChatOpen
-              ? "bg-gray-200 text-gray-600 rotate-90"
-              : "bg-gradient-to-tr from-gray-900 to-gray-700 text-white"
-          }`}
-        >
-          {isChatOpen ? <X size={24} /> : <Sparkles size={24} />}
-        </button>
+        </div>
       </div>
+
+      {/* Background Overlay */}
+      {overlay === "chat" && (
+        <div
+          className="fixed inset-0 bg-black/20 z-30 backdrop-blur-sm"
+          onClick={() => setOverlay(null)}
+        />
+      )}
+
+      {/* FAB Button */}
+      <button
+        type="button"
+        onClick={() =>
+          setOverlay((prev) => (prev === "chat" ? null : "chat"))
+        }
+        className={`fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
+          overlay === "chat"
+            ? "bg-gray-200 text-gray-600 rotate-90"
+            : "bg-gradient-to-tr from-gray-900 to-gray-700 text-white"
+        }`}
+      >
+        {overlay === "chat" ? <X size={20} /> : <Sparkles size={20} />}
+      </button>
     </div>
   );
 };
 
 export default App;
-

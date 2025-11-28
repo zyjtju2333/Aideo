@@ -11,3 +11,20 @@ body {
   @apply min-h-screen;
 }
 
+@layer base {
+  html {
+    font-size: 14px;
+  }
+
+  @media (max-width: 360px) {
+    html {
+      font-size: 13px;
+    }
+  }
+
+  @media (min-width: 600px) {
+    html {
+      font-size: 15px;
+    }
+  }
+}
