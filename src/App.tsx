@@ -312,37 +312,41 @@ const App: React.FC = () => {
     const [showMenu, setShowMenu] = useState(false);
 
     return (
-      <div className="group flex items-center justify-between p-2.5 mb-1.5 bg-white border border-gray-100 rounded-lg hover:shadow-sm transition-all duration-200">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div
+        className={`group relative flex items-center justify-between p-3 mb-2 bg-white rounded-xl border border-transparent transition-all duration-200 ${
+          todo.completed
+            ? "bg-gray-50/50"
+            : "hover:shadow-md hover:border-gray-100 hover:-translate-y-[1px]"
+        }`}
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             type="button"
             onClick={() => toggleComplete(todo)}
-            className={`transition-colors duration-200 ${
+            className={`relative flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-300 ${
               todo.completed
-                ? "text-gray-400"
-                : "text-gray-300 hover:text-gray-500"
+                ? "bg-black border-black text-white scale-100"
+                : "border-gray-300 hover:border-gray-500 text-transparent scale-95 hover:scale-100"
             }`}
           >
-            {todo.completed ? (
-              <CheckCircle2 size={16} className="text-green-500" />
-            ) : (
-              <Circle size={16} />
-            )}
+            <CheckCircle2 size={12} strokeWidth={3} className={`transition-transform duration-300 ${todo.completed ? "scale-100" : "scale-0"}`} />
           </button>
           <span
-            className={`text-xs font-medium transition-all duration-200 truncate ${
-              todo.completed ? "text-gray-400 line-through" : "text-gray-700"
+            className={`text-sm font-medium transition-all duration-300 truncate ${
+              todo.completed
+                ? "text-gray-400 line-through decoration-gray-200"
+                : "text-gray-700"
             }`}
           >
             {todo.text}
           </span>
         </div>
 
-        <div className="relative">
+        <div className="relative ml-2">
           <button
             type="button"
             onClick={() => setShowMenu((v) => !v)}
-            className="p-1 text-gray-300 hover:text-gray-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            className={`p-1.5 rounded-lg text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-all ${showMenu ? 'opacity-100 bg-gray-100 text-gray-600' : 'opacity-0 group-hover:opacity-100'}`}
           >
             <MoreHorizontal size={16} />
           </button>
@@ -354,16 +358,16 @@ const App: React.FC = () => {
                 className="fixed inset-0 z-10 cursor-default"
                 onClick={() => setShowMenu(false)}
               />
-              <div className="absolute right-0 top-6 z-20 w-32 bg-white border border-gray-100 shadow-lg rounded-md overflow-hidden py-1">
+              <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden p-1 animate-scale-in origin-top-right">
                 <button
                   type="button"
                   onClick={() => {
                     void updateStatus(todo, "cancelled");
                     setShowMenu(false);
                   }}
-                  className="w-full text-left px-2.5 py-1.5 text-[10px] text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors"
                 >
-                  <Archive size={12} /> 归档放弃
+                  <Archive size={14} className="text-gray-400" /> 归档放弃
                 </button>
                 <button
                   type="button"
@@ -371,9 +375,9 @@ const App: React.FC = () => {
                     void deleteTodo(todo);
                     setShowMenu(false);
                   }}
-                  className="w-full text-left px-2.5 py-1.5 text-[10px] text-red-500 hover:bg-red-50 flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors"
                 >
-                  <Trash2 size={12} /> 直接删除
+                  <Trash2 size={14} /> 直接删除
                 </button>
               </div>
             </>
@@ -396,54 +400,54 @@ const App: React.FC = () => {
       {/* --- Main Layout --- */}
       <div className="flex flex-col h-full px-4">
         {/* Header */}
-        <header className="mb-4 py-3 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-gray-800 flex items-center gap-2">
-              <span className="bg-black text-white p-1 rounded-md">
-                <CheckCircle2 size={16} />
+        <header className="mb-8 pt-6 flex items-center justify-between flex-shrink-0 px-2">
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+              <span className="bg-black text-white p-1.5 rounded-xl shadow-lg shadow-black/10">
+                <CheckCircle2 size={20} strokeWidth={2.5} />
               </span>
               Aideo
             </h1>
-            <p className="text-gray-500 text-[10px] mt-0.5 hidden sm:block">
-              本地数据库已就绪，支持离线任务管理。
+            <p className="text-gray-400 text-[11px] font-medium mt-1 ml-1 hidden sm:block tracking-wide">
+              FOCUS ON WHAT MATTERS
             </p>
           </div>
 
-          <div className="flex gap-1.5">
-            <div className="flex bg-gray-200 p-1 rounded-lg h-8">
+          <div className="flex gap-3">
+            <div className="flex bg-white border border-gray-100 p-1 rounded-xl shadow-sm h-10">
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className={`px-2 flex items-center rounded-md text-xs font-medium transition-all ${
+                className={`px-3 flex items-center rounded-lg text-xs font-medium transition-all duration-300 ${
                   view === "list"
-                    ? "bg-white shadow-sm text-black"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-black text-white shadow-md"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                <ListTodo size={12} className="mr-1" /> 列表
+                <ListTodo size={14} className="mr-1.5" /> 列表
               </button>
               <button
                 type="button"
                 onClick={() => setView("summary")}
-                className={`px-2 flex items-center rounded-md text-xs font-medium transition-all ${
+                className={`px-3 flex items-center rounded-lg text-xs font-medium transition-all duration-300 ${
                   view === "summary"
-                    ? "bg-white shadow-sm text-black"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-black text-white shadow-md"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                <Calendar size={12} className="mr-1" /> 回顾
+                <Calendar size={14} className="mr-1.5" /> 回顾
               </button>
             </div>
             <button
               type="button"
               onClick={() => setView("settings")}
-              className={`h-8 w-8 flex items-center justify-center rounded-lg transition-all ${
+              className={`h-10 w-10 flex items-center justify-center rounded-xl border transition-all duration-300 ${
                 view === "settings"
-                  ? "bg-gray-800 text-white"
-                  : "bg-gray-200 text-gray-500 hover:text-gray-800"
+                  ? "bg-white border-gray-200 text-black shadow-sm"
+                  : "bg-white border-transparent text-gray-400 hover:text-gray-600 hover:bg-gray-50"
               }`}
             >
-              <SettingsIcon size={14} />
+              <SettingsIcon size={18} />
             </button>
           </div>
         </header>
@@ -452,110 +456,140 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto pb-12">
           {/* --- View: Todo List --- */}
           {view === "list" && (
-            <div className="animate-in fade-in duration-500">
+            <div className="animate-in fade-in duration-500 max-w-3xl mx-auto">
             {/* Input Area */}
             <form onSubmit={handleAddTodo} className="relative mb-8 group">
-              <div className="absolute left-3 top-3 text-gray-400">
-                <Plus size={16} />
+              <div className="absolute left-4 top-4 text-gray-400 transition-colors group-focus-within:text-black">
+                <Plus size={20} />
               </div>
               <input
                 type="text"
                 value={newTodoInput}
                 onChange={(e) => setNewTodoInput(e.target.value)}
                 placeholder="写下你今天最重要的一件事..."
-                className="w-full pl-10 pr-4 py-2 bg-transparent border-b-2 border-gray-200 focus:border-gray-800 outline-none text-sm placeholder:text-gray-300 transition-colors"
+                className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-none shadow-sm hover:shadow-md focus:shadow-lg placeholder:text-gray-300 text-base transition-all duration-300 outline-none ring-1 ring-gray-100 focus:ring-2 focus:ring-black/5"
               />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within:opacity-100 transition-all duration-300 scale-90 group-focus-within:scale-100">
+                 <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-md">Enter</span>
+              </div>
             </form>
 
             {/* Tasks */}
-            <div className="space-y-1">
-              <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                进行中
-              </h2>
+            <div className="space-y-1 pb-20">
+              <div className="flex items-center justify-between mb-4 px-2">
+                 <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  进行中
+                </h2>
+                <span className="text-[10px] font-medium text-gray-300 bg-gray-100 px-2 py-0.5 rounded-full">
+                   {activeTodos.length}
+                </span>
+              </div>
+              
               {activeTodos.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-sm italic">
-                  没有待办事项，享受你的闲暇时光吧。
+                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+                  <div className="w-24 h-24 bg-white rounded-full shadow-sm flex items-center justify-center mb-2">
+                     <Sparkles size={32} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="text-gray-800 font-medium">没有待办事项</p>
+                    <p className="text-gray-400 text-xs mt-1">享受你的闲暇时光，或者规划新的目标。</p>
+                  </div>
                 </div>
               ) : (
                 activeTodos.map((todo) => (
                   <TodoItem key={todo.id} todo={todo} />
                 ))
               )}
-            </div>
 
             {/* Archived */}
             {archivedTodos.length > 0 && (
-              <div className="mt-12 opacity-60">
-                <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1 flex items-center gap-2">
-                  <Archive size={11} /> 已归档 / 放弃
+              <div className="mt-16 pt-8 border-t border-gray-200/50 opacity-80">
+                <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 px-2 flex items-center gap-2">
+                  <Archive size={12} /> 已归档 / 放弃
                 </h2>
+                <div className="space-y-1">
                 {archivedTodos.map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex items-center gap-2 p-2.5 mb-1.5 border-b border-gray-100"
+                    className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white/50 transition-colors duration-200"
                   >
-                    <div className="w-4 h-4 rounded-full border border-gray-200 flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
-                    </div>
-                    <span className="text-xs text-gray-400 line-through">
+                    <div className="w-2 h-2 rounded-full bg-gray-200 group-hover:bg-gray-300 transition-colors" />
+                    <span className="text-xs text-gray-400 line-through decoration-gray-200 flex-1 truncate">
                       {todo.text}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateStatus(todo, "pending")}
-                      className="ml-auto text-xs text-blue-500 hover:underline"
+                      className="px-2 py-1 text-[10px] font-medium text-gray-400 hover:text-black hover:bg-white rounded-md border border-transparent hover:border-gray-100 hover:shadow-sm transition-all opacity-0 group-hover:opacity-100"
                     >
                       恢复
                     </button>
                   </div>
                 ))}
+                </div>
               </div>
             )}
+            </div>
           </div>
         )}
 
         {/* --- View: Summary --- */}
         {view === "summary" && (
-          <div className="animate-in slide-in-from-right-4 duration-300">
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <div className="text-2xl font-bold text-gray-800 mb-1">
+          <div className="animate-slide-in-bottom max-w-3xl mx-auto">
+            <h2 className="text-lg font-bold text-gray-900 mb-6 px-1">本周概览</h2>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <CheckCircle2 size={64} className="text-green-500" />
+                </div>
+                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest z-10">
+                  已完成
+                </div>
+                <div className="text-4xl font-bold text-gray-900 z-10">
                   {completedCount}
                 </div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wide">
-                  已完成任务
-                </div>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <div className="text-2xl font-bold text-gray-800 mb-1">
-                  {activeTodos.length}
+              <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between h-32 relative overflow-hidden group hover:shadow-md transition-all">
+                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <Circle size={64} className="text-blue-500" />
                 </div>
-                <div className="text-[10px] text-gray-500 uppercase tracking-wide">
-                  待办任务
+                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest z-10">
+                  待办中
+                </div>
+                <div className="text-4xl font-bold text-gray-900 z-10">
+                  {activeTodos.length}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-4">
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Sparkles size={14} className="text-yellow-500" /> AI 智能周报
+            <div className="bg-gradient-to-br from-white to-purple-50/50 p-6 rounded-2xl border border-purple-100/50 shadow-sm mb-4 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200/20 rounded-full blur-3xl -mr-10 -mt-10" />
+              
+              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 relative z-10">
+                <Sparkles size={16} className="text-purple-500" /> AI 智能周报
               </h3>
-              <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-600 leading-relaxed">
+              
+              <div className="bg-white/60 backdrop-blur-sm border border-white/50 p-5 rounded-xl text-sm text-gray-600 leading-relaxed relative z-10 shadow-sm">
                 {!settings.apiKey && (
-                  <div className="text-xs text-orange-500 mb-2 font-medium flex items-center gap-1">
-                    <AlertCircle size={12} />
+                  <div className="text-xs text-orange-600 bg-orange-50 border border-orange-100 px-3 py-2 rounded-lg mb-3 font-medium flex items-center gap-2">
+                    <AlertCircle size={14} />
                     当前未配置 API Key，AI 分析不可用。
                   </div>
                 )}
-                本周你的工作效率很高。你主要集中在{" "}
-                <span className="font-medium text-gray-900">日常事务处理</span>{" "}
-                上。
-                你放弃了 {archivedTodos.length} 个任务，这说明你在尝试精简目标，这是好事。
-                <br />
-                <br />
-                {settings.apiKey
-                  ? "（来自真实 AI 模型的分析）"
-                  : "配置好 AI 之后，可以在这里查看自动生成的周报和建议。"}
+                <div className="prose prose-sm max-w-none text-gray-600">
+                    <p>
+                    本周你的工作效率很高。你主要集中在{" "}
+                    <span className="font-semibold text-gray-900 bg-purple-100/50 px-1 rounded">日常事务处理</span>{" "}
+                    上。
+                    你放弃了 {archivedTodos.length} 个任务，这说明你在尝试精简目标，这是好事。
+                    </p>
+                    <p className="mt-2 text-xs text-gray-400 italic">
+                    {settings.apiKey
+                    ? "（来自真实 AI 模型的分析）"
+                    : "配置好 AI 之后，可以在这里查看自动生成的周报和建议。"}
+                    </p>
+                </div>
               </div>
             </div>
           </div>
@@ -563,231 +597,244 @@ const App: React.FC = () => {
 
         {/* --- View: Settings --- */}
         {view === "settings" && (
-          <div className="animate-in slide-in-from-right-4 duration-300">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-100">
-                <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                  <SettingsIcon size={16} /> 设置
-                </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  配置应用参数和 AI 模型连接。
+          <div className="animate-slide-in-bottom max-w-3xl mx-auto pb-20">
+             <h2 className="text-lg font-bold text-gray-900 mb-6 px-1">设置</h2>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+              <div className="p-6 border-b border-gray-50">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <Database size={18} />
+                  </div>
+                  <h3 className="font-bold text-gray-900">数据库状态</h3>
+                </div>
+                <p className="text-xs text-gray-500 ml-11">
+                  您的数据安全地存储在本地。
+                </p>
+              </div>
+               <div className="px-6 py-4 bg-gray-50/50 flex items-center justify-between">
+                    <span className="text-xs text-gray-600 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                      本地数据库已连接
+                    </span>
+               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-gray-50">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                    <Bot size={18} />
+                  </div>
+                  <h3 className="font-bold text-gray-900">LLM 模型配置</h3>
+                </div>
+                 <p className="text-xs text-gray-500 ml-11">
+                  配置 AI 助手以启用智能建议和周报功能。
                 </p>
               </div>
 
-              <div className="p-6 space-y-6">
-                {/* Database Section */}
+              <div className="p-6 space-y-5">
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                    <Database size={14} className="text-blue-500" /> 数据库状态
-                  </h3>
-                  <div className="bg-blue-50 text-blue-800 text-xs p-4 rounded-lg flex items-center justify-between">
-                    <span>
-                      <span className="font-bold">本地数据库已连接</span>
-                      <br />
-                      <span className="text-[10px] opacity-75">
-                        所有数据保存在本机，无需登录账号。
-                      </span>
-                    </span>
-                    <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-                  </div>
+                    <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">
+                    API Key
+                    </label>
+                    <div className="relative group">
+                    <Key
+                        size={16}
+                        className="absolute left-3.5 top-3 text-gray-300 group-focus-within:text-purple-500 transition-colors"
+                    />
+                    <input
+                        type="password"
+                        value={settings.apiKey}
+                        onChange={(e) =>
+                        setSettings((prev) => ({
+                            ...prev,
+                            apiKey: e.target.value,
+                        }))
+                        }
+                        placeholder="输入 OpenAI / DeepSeek 等服务的 API Key..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300"
+                    />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5 ml-1">
+                    密钥仅保存在本地数据库中，不会上传到任何服务器。
+                    </p>
                 </div>
 
-                <hr className="border-gray-100" />
-
-                {/* LLM Section */}
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                    <Bot size={14} className="text-purple-500" /> LLM 模型配置
-                  </h3>
-
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
-                        API Key
-                      </label>
-                      <div className="relative">
-                        <Key
-                          size={14}
-                          className="absolute left-3 top-2.5 text-gray-400"
-                        />
-                        <input
-                          type="password"
-                          value={settings.apiKey}
-                          onChange={(e) =>
-                            setSettings((prev) => ({
-                              ...prev,
-                              apiKey: e.target.value,
-                            }))
-                          }
-                          placeholder="输入 OpenAI / DeepSeek 等服务的 API Key..."
-                          className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                        />
-                      </div>
-                      <p className="text-[9px] text-gray-400 mt-1">
-                        密钥仅保存在本地数据库中，不会上传到任何服务器。
-                      </p>
+                    <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">
+                        Base URL
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.apiBaseUrl}
+                        onChange={(e) =>
+                        setSettings((prev) => ({
+                            ...prev,
+                            apiBaseUrl: e.target.value,
+                        }))
+                        }
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300"
+                    />
                     </div>
-
-                    <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
-                          Base URL
-                        </label>
-                        <input
-                          type="text"
-                          value={settings.apiBaseUrl}
-                          onChange={(e) =>
-                            setSettings((prev) => ({
-                              ...prev,
-                              apiBaseUrl: e.target.value,
-                            }))
-                          }
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-medium text-gray-500 mb-1 uppercase">
-                          模型名称 (Model)
-                        </label>
-                        <input
-                          type="text"
-                          value={settings.model}
-                          onChange={(e) =>
-                            setSettings((prev) => ({
-                              ...prev,
-                              model: e.target.value,
-                            }))
-                          }
-                          placeholder="例如: gpt-4o-mini / deepseek-chat"
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all"
-                        />
-                      </div>
+                    <div>
+                    <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">
+                        模型名称 (Model)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.model}
+                        onChange={(e) =>
+                        setSettings((prev) => ({
+                            ...prev,
+                            model: e.target.value,
+                        }))
+                        }
+                        placeholder="例如: gpt-4o-mini"
+                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300"
+                    />
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleTestApi}
-                        disabled={testingApi}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
-                      >
-                        {testingApi && (
-                          <Loader2 size={12} className="animate-spin" />
-                        )}
-                        测试连接
-                      </button>
-                      {apiTestResult === true && (
-                        <span className="text-xs text-green-600">
-                          连接成功，可以正常调用。
-                        </span>
-                      )}
-                      {apiTestResult === false && (
-                        <span className="text-xs text-red-500">
-                          连接失败，请检查 Key 与 Base URL。
-                        </span>
-                      )}
-                    </div>
+                <div className="flex items-center gap-3 pt-2">
+                    <button
+                    type="button"
+                    onClick={handleTestApi}
+                    disabled={testingApi}
+                    className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+                    >
+                    {testingApi ? (
+                        <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                        <span className="w-2 h-2 rounded-full bg-gray-400" />
+                    )}
+                    测试连接
+                    </button>
+                    {apiTestResult === true && (
+                    <span className="text-xs text-green-600 font-medium flex items-center gap-1 animate-in fade-in">
+                         <CheckCircle2 size={14} /> 连接成功
+                    </span>
+                    )}
+                    {apiTestResult === false && (
+                    <span className="text-xs text-red-500 font-medium flex items-center gap-1 animate-in fade-in">
+                        <AlertCircle size={14} /> 连接失败
+                    </span>
+                    )}
+                </div>
 
-                    {/* Advanced Settings */}
-                    <details className="mt-3 border-t border-gray-200 pt-3 text-xs">
-                      <summary className="flex items-center justify-between cursor-pointer select-none">
-                        <span className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-700 uppercase">
-                          高级设置
+                {/* Advanced Settings */}
+                <div className="border-t border-gray-100 pt-4">
+                    <details className="group">
+                    <summary className="flex items-center justify-between cursor-pointer select-none text-gray-500 hover:text-gray-800 transition-colors">
+                        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+                         高级设置
                         </span>
-                        <span className="text-[9px] text-gray-400">
-                          可选扩展功能
-                        </span>
-                      </summary>
+                         <div className="p-1 rounded hover:bg-gray-100">
+                            <MoreHorizontal size={16} />
+                         </div>
+                    </summary>
 
-                      <div className="mt-2 space-y-3">
+                    <div className="mt-4 space-y-5 pl-1 animate-in fade-in slide-in-from-top-2">
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-600 mb-1">
-                            函数调用模式
-                          </label>
-                          <select
-                            value={settings.functionCallingMode || "auto"}
-                            onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                functionCallingMode: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border border-gray-300 rounded text-xs"
-                          >
-                            <option value="auto">自动（推荐）</option>
-                            <option value="tools">仅现代格式（Tools）</option>
-                            <option value="functions">仅旧版格式（Functions）</option>
-                            <option value="disabled">禁用函数调用</option>
-                          </select>
-                          <p className="text-[9px] text-gray-500 mt-1">
-                            自动模式会尝试两种格式以获得最佳兼容性
-                          </p>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="enableTextFallback"
-                            checked={settings.enableTextFallback !== false}
-                            onChange={(e) =>
-                              setSettings({
-                                ...settings,
-                                enableTextFallback: e.target.checked,
-                              })
-                            }
-                            className="rounded"
-                          />
-                          <label
-                            htmlFor="enableTextFallback"
-                            className="text-xs text-gray-700"
-                          >
-                            启用文本解析降级（推荐）
-                          </label>
-                        </div>
-                        <p className="text-[9px] text-gray-500 ml-6">
-                          当 API 不支持结构化函数调用时，尝试从文本中解析函数调用
-                        </p>
-                      </div>
-                    </details>
-
-                    {/* Function Calling Test */}
-                    <div className="space-y-2 pt-3 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={handleTestFunctionCalling}
-                        disabled={isTesting}
-                        className="px-4 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-xs"
-                      >
-                        {isTesting ? "测试中..." : "测试函数调用"}
-                      </button>
-
-                      {fcTestResult && (
-                        <div className={`p-3 rounded text-xs ${fcTestResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                          <p className={`font-semibold ${fcTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                            {fcTestResult.message}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-1">
-                            检测到的格式: {fcTestResult.apiFormatDetected}
-                          </p>
-                          {fcTestResult.success && fcTestResult.todosCreated > 0 && (
-                            <p className="text-xs text-green-700 mt-1">
-                              ✓ 任务列表已自动刷新，请切换到"列表"视图查看
-                            </p>
-                          )}
-                          {fcTestResult.recommendations && fcTestResult.recommendations.length > 0 && (
-                            <div className="mt-2 text-xs text-gray-700">
-                              <p className="font-semibold">建议：</p>
-                              <ul className="list-disc list-inside">
-                                {fcTestResult.recommendations.map((rec: string, i: number) => (
-                                  <li key={i}>{rec}</li>
-                                ))}
-                              </ul>
+                        <label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">
+                            函数调用模式 (Function Calling)
+                        </label>
+                        <div className="relative">
+                            <select
+                                value={settings.functionCallingMode || "auto"}
+                                onChange={(e) =>
+                                setSettings({
+                                    ...settings,
+                                    functionCallingMode: e.target.value,
+                                })
+                                }
+                                className="w-full pl-3 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm appearance-none focus:border-purple-500 focus:ring-2 focus:ring-purple-50 outline-none"
+                            >
+                                <option value="auto">自动（推荐）</option>
+                                <option value="tools">仅现代格式（Tools）</option>
+                                <option value="functions">仅旧版格式（Functions）</option>
+                                <option value="disabled">禁用函数调用</option>
+                            </select>
+                            <div className="absolute right-3 top-3 pointer-events-none text-gray-400">
+                                <Bot size={14} />
                             </div>
-                          )}
                         </div>
-                      )}
+                        <p className="text-[10px] text-gray-400 mt-1.5">
+                            自动模式会尝试两种格式以获得最佳兼容性
+                        </p>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                             <div className="relative flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="enableTextFallback"
+                                    checked={settings.enableTextFallback !== false}
+                                    onChange={(e) =>
+                                    setSettings({
+                                        ...settings,
+                                        enableTextFallback: e.target.checked,
+                                    })
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                />
+                             </div>
+                            <div>
+                                <label
+                                    htmlFor="enableTextFallback"
+                                    className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+                                >
+                                    启用文本解析降级（推荐）
+                                </label>
+                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                    当 API 不支持结构化函数调用时，尝试从文本中解析指令。
+                                </p>
+                            </div>
+                        </div>
+                        
+                         {/* Function Calling Test */}
+                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                             <div className="flex items-center justify-between mb-2">
+                                 <span className="text-xs font-semibold text-gray-600">调试工具</span>
+                                 <button
+                                    type="button"
+                                    onClick={handleTestFunctionCalling}
+                                    disabled={isTesting}
+                                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-purple-300 hover:text-purple-600 text-xs transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                >
+                                    {isTesting ? "测试中..." : "测试函数调用能力"}
+                                </button>
+                             </div>
+
+                            {fcTestResult && (
+                                <div className={`mt-3 p-3 rounded-lg text-xs border ${fcTestResult.success ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'} animate-in fade-in slide-in-from-top-1`}>
+                                <p className={`font-semibold mb-1 ${fcTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                                    {fcTestResult.message}
+                                </p>
+                                <p className="text-gray-500 mb-1">
+                                    检测格式: <span className="font-mono bg-white px-1 rounded border border-gray-100">{fcTestResult.apiFormatDetected}</span>
+                                </p>
+                                {fcTestResult.success && fcTestResult.todosCreated > 0 && (
+                                    <p className="text-green-700 mt-1 flex items-center gap-1">
+                                    <CheckCircle2 size={10} /> 任务列表已自动刷新
+                                    </p>
+                                )}
+                                {fcTestResult.recommendations && fcTestResult.recommendations.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-gray-200/50 text-gray-600">
+                                    <p className="font-semibold mb-1">建议：</p>
+                                    <ul className="list-disc list-inside space-y-0.5 opacity-80">
+                                        {fcTestResult.recommendations.map((rec: string, i: number) => (
+                                        <li key={i}>{rec}</li>
+                                        ))}
+                                    </ul>
+                                    </div>
+                                )}
+                                </div>
+                            )}
+                         </div>
                     </div>
-                  </div>
+                    </details>
                 </div>
               </div>
 
@@ -796,12 +843,12 @@ const App: React.FC = () => {
                   type="button"
                   onClick={() => void saveSettings()}
                   disabled={savingSettings}
-                  className="flex items-center gap-2 px-6 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-all active:scale-95 text-xs font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-all active:scale-95 text-sm font-medium disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-black/10"
                 >
                   {savingSettings && (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={16} className="animate-spin" />
                   )}
-                  <Save size={14} /> 保存配置
+                  <Save size={16} /> 保存配置
                 </button>
               </div>
             </div>
@@ -815,24 +862,31 @@ const App: React.FC = () => {
       <div
         className={`
           fixed bottom-0 left-0 right-0 z-40
-          bg-white border-t border-gray-200 shadow-2xl
-          transition-transform duration-300 ease-out will-change-transform
-          ${overlay === "chat" ? "translate-y-0" : "translate-y-full"}
+          bg-white/95 backdrop-blur-xl border-t border-gray-200/50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]
+          transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) will-change-transform
+          rounded-t-[2rem]
+          ${overlay === "chat" ? "translate-y-0" : "translate-y-[110%]"}
         `}
-        style={{ height: "70vh" }}
+        style={{ height: "75vh" }}
       >
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col relative">
+           {/* Handle bar for visual cue */}
+           <div className="absolute -top-3 left-0 right-0 flex justify-center pointer-events-none">
+             <div className="w-12 h-1.5 bg-gray-300/50 rounded-full backdrop-blur-sm" />
+           </div>
+
           {/* Chat Header */}
-          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/80 backdrop-blur flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-tr from-purple-500 to-indigo-500 text-white p-1 rounded-lg">
-                <Bot size={14} />
+          <div className="px-6 py-4 border-b border-gray-100/50 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-tr from-black to-gray-700 text-white p-2 rounded-xl shadow-lg shadow-gray-200">
+                <Bot size={18} />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-xs text-gray-700">
+                <span className="font-bold text-sm text-gray-800">
                   AI 效率助手
                 </span>
-                <span className="text-[10px] text-gray-400 leading-none">
+                <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${settings.apiKey ? 'bg-green-500' : 'bg-gray-300'}`} />
                   {settings.apiKey ? "Online" : "需要配置 API Key"}
                 </span>
               </div>
@@ -840,14 +894,14 @@ const App: React.FC = () => {
             <button
               type="button"
               onClick={() => setOverlay(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-all"
             >
-              <X size={16} />
+              <X size={20} />
             </button>
           </div>
 
           {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-white text-xs">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50/30 scroll-smooth">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -860,15 +914,15 @@ const App: React.FC = () => {
                 }`}
               >
                 {msg.role === "system" ? (
-                  <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-3 py-1 rounded-full border border-gray-200/50">
                     {msg.content}
                   </span>
                 ) : (
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                       msg.role === "user"
                         ? "bg-black text-white rounded-br-none"
-                        : "bg-gray-100 text-gray-800 rounded-bl-none"
+                        : "bg-white border border-gray-100 text-gray-700 rounded-bl-none"
                     }`}
                   >
                     {msg.content}
@@ -878,7 +932,7 @@ const App: React.FC = () => {
             ))}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl rounded-bl-none px-3 py-2 flex gap-1 items-center">
+                <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-none px-4 py-3 flex gap-1.5 items-center shadow-sm">
                   <div
                     className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0ms" }}
@@ -899,14 +953,14 @@ const App: React.FC = () => {
 
           {/* Quick Actions */}
           {messages.length <= 1 && (
-            <div className="px-3 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+            <div className="px-6 pb-2 flex gap-2 overflow-x-auto no-scrollbar py-2">
               <button
                 type="button"
                 onClick={() => {
                   setChatInput("帮我把这个大目标拆成可执行的小任务");
                   void handleSendChat();
                 }}
-                className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-[10px] text-gray-600 rounded-full border border-gray-200 transition"
+                className="flex-shrink-0 px-4 py-2 bg-white hover:bg-gray-50 text-xs text-gray-600 font-medium rounded-full border border-gray-200 transition-all hover:border-gray-300 hover:shadow-sm"
               >
                 ✨ 生成项目计划
               </button>
@@ -916,7 +970,7 @@ const App: React.FC = () => {
                   setChatInput("帮我总结一下本周的完成情况");
                   void handleSendChat();
                 }}
-                className="whitespace-nowrap px-3 py-1 bg-gray-50 hover:bg-gray-100 text-[10px] text-gray-600 rounded-full border border-gray-200 transition"
+                className="flex-shrink-0 px-4 py-2 bg-white hover:bg-gray-50 text-xs text-gray-600 font-medium rounded-full border border-gray-200 transition-all hover:border-gray-300 hover:shadow-sm"
               >
                 📊 总结本周
               </button>
@@ -924,26 +978,26 @@ const App: React.FC = () => {
           )}
 
           {/* Input */}
-          <div className="px-3 pb-3 bg-white border-t border-gray-50">
-            <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-2 border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+          <div className="p-4 bg-white border-t border-gray-100">
+            <div className="flex items-center gap-3 bg-gray-50 rounded-[1.5rem] px-4 py-3 border border-transparent focus-within:bg-white focus-within:border-gray-200 focus-within:ring-4 focus-within:ring-gray-100 transition-all duration-300">
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void handleSendChat()}
-                placeholder="问问 AI..."
-                className="flex-1 bg-transparent outline-none text-xs text-gray-700 placeholder:text-gray-400"
+                placeholder="输入指令或提问..."
+                className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
               />
               <button
                 type="button"
                 onClick={() => void handleSendChat()}
                 disabled={!chatInput.trim()}
-                className={`p-1.5 rounded-full transition-all ${
+                className={`p-2 rounded-full transition-all duration-300 ${
                   chatInput.trim()
-                    ? "bg-black text-white hover:bg-gray-800"
+                    ? "bg-black text-white hover:scale-105 shadow-md"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 }`}
               >
-                <Send size={12} />
+                <Send size={14} />
               </button>
             </div>
           </div>
@@ -953,7 +1007,7 @@ const App: React.FC = () => {
       {/* Background Overlay */}
       {overlay === "chat" && (
         <div
-          className="fixed inset-0 bg-black/20 z-30 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/30 z-30 backdrop-blur-[2px] animate-in fade-in duration-500"
           onClick={() => setOverlay(null)}
         />
       )}
@@ -964,13 +1018,13 @@ const App: React.FC = () => {
         onClick={() =>
           setOverlay((prev) => (prev === "chat" ? null : "chat"))
         }
-        className={`fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
+        className={`fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-500 hover:scale-110 active:scale-90 ${
           overlay === "chat"
-            ? "bg-gray-200 text-gray-600 rotate-90"
-            : "bg-gradient-to-tr from-gray-900 to-gray-700 text-white"
+            ? "bg-white text-gray-800 rotate-90 hover:bg-gray-100"
+            : "bg-black text-white hover:shadow-black/25"
         }`}
       >
-        {overlay === "chat" ? <X size={20} /> : <Sparkles size={20} />}
+        {overlay === "chat" ? <X size={24} /> : <Sparkles size={24} />}
       </button>
     </div>
   );
